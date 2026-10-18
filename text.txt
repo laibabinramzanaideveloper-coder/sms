@@ -1,0 +1,25 @@
+ALTER TABLE students ADD COLUMN is_deleted BOOL DEFAULT FALSE;
+ALTER TABLE students ADD COLUMN deleted_at TIMESTAMP;
+step 1 : 
+create new branch such "add_support_for_soft_delete"
+
+step 2: add all code to staging area
+git add . 
+
+step 3: add commint message
+git commit -m "add support for soft delete"
+
+step 4 : push branch 
+git push origin add__support_for_soft_delete
+
+
+step_5 create pr on github
+
+
+
+
+
+
+
+
+alembic revision -m "add soft delete columns in students table"
