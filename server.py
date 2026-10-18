@@ -8,9 +8,22 @@ from dto import Subject
 from dto import Employees
 from dto import Fees
 from dto import Salary
+from dto import UpdateStudent
+from dto import UpdateEmployee
+from dto import UpdateFees
+from dto import UpdateSalary
+from dto import UpdateSubject
 from psycopg.rows import dict_row
+import logging
 
 app = FastAPI()
+logging.basicConfig(
+    level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
+# debug 0
+# info 1
+# error 2
 
 
 
@@ -85,15 +98,14 @@ def create_student(student: Student):
             cursor.execute(
                 """
                 INSERT INTO students
-                ( student_name , father_name , phone_number, fees)
-                VALUES (%s, %s, %s, %s)
+                (student_name , phone_number)
+                VALUES (%s, %s)
                 RETURNING *
                 """,
                 (
                     student.name,
-                    student.father_name,
                     student.phone_number,
-                    student.fees
+                    
                 )   
             )
 
@@ -165,7 +177,7 @@ def create_fees(fee:Fees):
             new_fee = cursor.fetchone()
 
             return {
-                "message": "Subject added successfully",
+                "message": "fees added successfully",
                 "fee": new_fee
             }
 
@@ -214,12 +226,12 @@ def create_fees(employees:Employees):
                   cursor.execute(
                       """
                       INSERT INTO employees
-                      ( employee_name,phone_number,work,education,date_of_birth,father_name,year,role,uu_id)
-                      VALUES (%s, %s,%s,%s,%s,%s,%s,%s,%s)
+                      ( employee_name,phone_number,work,education,date_of_birth,father_name,year,role)
+                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                       RETURNING *
                       """,
                       (
-                          employees.employee_name,
+                          employees.name,
                           employees.phone_number,
                           employees.work,
                           employees.education,
@@ -264,33 +276,204 @@ def get_fees():
       with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
       
           with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM fees ")
+            cursor.execute("SELECT * FROM fees WHERE is_deleted = false")
             fees = cursor.fetchall()
             if not fees:
                   raise RecordNotFound(404,"record not found")
             return fees    
-
+        
 
 
 @app.get("/students")
 def get_student():
+      
       with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
       
           with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM students ")
+            cursor.execute("SELECT * FROM students WHERE is_deleted = false ")
             fees = cursor.fetchall()
             if not fees:
                   raise RecordNotFound(404,"record not found")
             return fees   
           
+@app.patch("/students/{student_id}")
+def update_student(student_id:int,student_updated_data:UpdateStudent):
+
+    #   logger.debug("debug++++++++++++++")
+    #   logger.info("Update data: %s", update_data)
+    #   logger.error("error+++++++++++++")
+    #   print(update_data)
+    #   logger.info(f"{student_updated_data.phone_number} namber")
+    #   logger.info(f"{student_updated_data.name} name")
+      with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                 cursor.execute("""select * from students WHERE id = %s and is_deleted = false""",(student_id,))
+                 student=cursor.fetchone()
+                 if not student:
+                       raise RecordNotFound(404,"record not found")
+                 cursor.execute("""
+                 update students
+                 set phone_number = COALESCE(%s, phone_number),
+                  student_name =COALESCE(%s, student_name)
+                 where id = %s
+                 RETURNING *""",
+                 (
+                    student_updated_data.phone_number,
+                    student_updated_data.name,
+                    student_id
+                 )
+                 
+                 )
+             
+            connection.commit()
+            return {"message":"student update successfully"}
+@app.patch("/employees/{employee_id}")
+def update_student(employee_id:int,employee_updated_data:UpdateEmployee):
+
+    #   logger.debug("debug++++++++++++++")
+    #   logger.info("Update data: %s", update_data)
+    #   logger.error("error+++++++++++++")
+    #   print(update_data)
+    #   logger.info(f"{student_updated_data.phone_number} namber")
+    #   logger.info(f"{student_updated_data.name} name")
+      with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                 cursor.execute("""select * from employees WHERE id = %s and is_deleted = false""",(employee_id,))
+                 employee=cursor.fetchone()
+                 if not employee:
+                       raise RecordNotFound(404,"record not found")
+                 cursor.execute("""
+                 update employees
+                 set phone_number = COALESCE(%s, phone_number),
+                  employee_name =COALESCE(%s, employee_name),
+                  work=COALESCE(%s,work),
+                  education=COALESCE(%s,education),
+                  date_of_birth=COALESCE(%s,date_of_birth),
+                  father_name=COALESCE(%s,father_name),
+                  year=COALESCE(%s,year),
+                  role=COALESCE(%s,role)
+                 where id = %s
+                 RETURNING *""",
+                 (
+                    employee_updated_data.phone_number,
+                    employee_updated_data.name,
+                    employee_updated_data.work,
+                    employee_updated_data.education,
+                    employee_updated_data.date_of_birth,
+                    employee_updated_data.father_name,
+                    employee_updated_data.year,
+                    employee_updated_data.role,
+
+                    employee_id
+                 )
+                 
+                 )
+                 
+            connection.commit()
+            return {"message":"employee update successfully"}
 
 
+@app.patch("/fees/{student_id}")
+def update_student(student_id:int,fees_updated_data:UpdateFees):
+
+    #   logger.debug("debug++++++++++++++")
+    #   logger.info("Update data: %s", update_data)
+    #   logger.error("error+++++++++++++")
+    #   print(update_data)
+    #   logger.info(f"{student_updated_data.phone_number} namber")
+    #   logger.info(f"{student_updated_data.name} name")
+      with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                 cursor.execute("""select * from fees WHERE id = %s and is_deleted = false""",(student_id,))
+                 fees=cursor.fetchone()
+                 if not fees:
+                       raise RecordNotFound(404,"record not found")
+                 cursor.execute("""
+                 update fees
+                 set amount = COALESCE(%s, amount),
+                  student_id =COALESCE(%s, student_id)
+                 where id = %s
+                 RETURNING *""",
+                 (
+                    fees_updated_data.amount,
+                    fees_updated_data.student_id,
+                    student_id
+                 )
+                 
+                 )
+             
+            connection.commit()
+            return {"message":"fees update successfully"}
+@app.patch("/salary/{employee_id}")
+def update_student(employee_id:int,employee_updated_data:UpdateSalary):
+
+    #   logger.debug("debug++++++++++++++")
+    #   logger.info("Update data: %s", update_data)
+    #   logger.error("error+++++++++++++")
+    #   print(update_data)
+    #   logger.info(f"{student_updated_data.phone_number} namber")
+    #   logger.info(f"{student_updated_data.name} name")
+      with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                 cursor.execute("""select * from salary WHERE id = %s and is_deleted = false""",(employee_id,))
+                 salary=cursor.fetchone()
+                 if not salary:
+                       raise RecordNotFound(404,"record not found")
+                 cursor.execute("""
+                 update salary
+                 set amount = COALESCE(%s, amount),
+                  employee_id =COALESCE(%s, employee_id)
+                 where id = %s
+                 RETURNING *""",
+                 (
+                    employee_updated_data.amount,
+                    employee_updated_data.employee_id,
+                    employee_id
+                 )
+                 
+                 )
+             
+            connection.commit()
+            return {"message":"salary update successfully"}
+
+
+@app.patch("/subjects/{subject_id}")
+def update_student(subject_id:int,subject_updated_data:UpdateSubject):
+
+    #   logger.debug("debug++++++++++++++")
+    #   logger.info("Update data: %s", update_data)
+    #   logger.error("error+++++++++++++")
+    #   print(update_data)
+    #   logger.info(f"{student_updated_data.phone_number} namber")
+    #   logger.info(f"{student_updated_data.name} name")
+      with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                 cursor.execute("""select * from subject WHERE id = %s and is_deleted = false""",(subject_id,))
+                 subject=cursor.fetchone()
+                 if not subject:
+                       raise RecordNotFound(404,"record not found")
+                 cursor.execute("""
+                 update subject
+                 set teacher_name = COALESCE(%s, teacher_name),
+                  subject_name =COALESCE(%s, subject_name)
+                 where id = %s
+                 RETURNING *""",
+                 (
+                    subject_updated_data.name,
+                    subject_updated_data.teacher_name,
+                    subject_id
+                 )
+                 
+                 )
+             
+            connection.commit()
+            return {"message":"subject update successfully"}
 @app.get("/subjects")
 def get_subject():
     with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
     
           with connection.cursor() as cursor:
-             cursor.execute("SELECT * FROM subject")
+             cursor.execute("SELECT * FROM subject WHERE is_deleted = false")
              subject = cursor.fetchall()
              if not subject:
                  raise RecordNotFound(404,"record not found")      
@@ -301,7 +484,7 @@ def get_employee():
       with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
       
           with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM employees")
+            cursor.execute("SELECT * FROM employees WHERE is_deleted = false")
             employees = cursor.fetchall()
             if not employees:
                   raise RecordNotFound(404,"record not found")
@@ -312,7 +495,7 @@ def get_fees():
       with psycopg.connect("dbname=sms user=postgres password=12341234 host=localhost", row_factory=dict_row) as connection:
       
           with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM salary")
+            cursor.execute("SELECT * FROM salary WHERE is_deleted = false")
             fees = cursor.fetchall()
             if not fees:
                   raise RecordNotFound(404,"record not found")
@@ -331,7 +514,7 @@ def get_employee(id:int):
         with connection.cursor() as cursor:
 
             cursor.execute(
-                "SELECT * FROM employees WHERE id = %s",
+                "SELECT * FROM employees WHERE id = %s and is_deleted =false",
                 (id,)
             )
 
@@ -352,7 +535,7 @@ def get_salary(id:int):
         with connection.cursor() as cursor:
 
             cursor.execute(
-                "SELECT * FROM salary WHERE id = %s",
+                "SELECT * FROM salary WHERE id = %s and is_deleted = false",
                 (id,)
             )
 
@@ -363,8 +546,8 @@ def get_salary(id:int):
             return salary       
 
 
-@app.get("/subject/{id}")
-def get_salary(id:int):
+@app.get("/subjects/{id}")
+def get_subject(id:int):
 
     with psycopg.connect(
         "dbname=sms user=postgres password=12341234 host=localhost",
@@ -374,7 +557,7 @@ def get_salary(id:int):
         with connection.cursor() as cursor:
 
             cursor.execute(
-                "SELECT * FROM subject WHERE id = %s",
+                "SELECT * FROM subject WHERE id = %s and is_deleted = false",
                 (id,)
             )
 
@@ -394,15 +577,47 @@ def get_salary(id:int):
         with connection.cursor() as cursor:
 
             cursor.execute(
-                "SELECT * FROM fees WHERE id = %s",
+                "SELECT * FROM fees WHERE id = %s and is_deleted = false",
                 (id,)
             )
+            # if cursor.rowcount == 0:
+            #   raise RecordNotFound(404, f"Invalid student_id {student_id}")
 
             fees = cursor.fetchone()
             if not fees:
                    raise RecordNotFound(404,"record not found")
 
             return fees
+
+
+# @app.delete("/students/{student_id}")
+# def delete_student(student_id: int):
+#     with psycopg.connect(
+#         "dbname=sms user=postgres password=12341234 host=localhost",
+#         row_factory=dict_row
+#     ) as connection:
+
+    
+#           with connection.cursor() as cursor:
+
+#               cursor.execute(
+#                 "DELETE FROM fees WHERE student_id = %s",
+#               (student_id,)
+#               )
+
+#               cursor.execute(
+#               "DELETE FROM students WHERE id = %s",
+#               (student_id,)
+#               )
+
+#               if cursor.rowcount == 0:
+#                   raise RecordNotFound(404, f"Invalid student_id {student_id}")
+
+#           connection.commit()
+
+#           return {"message": "Student is deleted"}
+
+
 
 
 @app.delete("/students/{student_id}")
@@ -414,25 +629,65 @@ def delete_student(student_id: int):
 
     
           with connection.cursor() as cursor:
+              cursor.execute("""
+              select * from students where id =%s and is_deleted = false""",
+              (student_id,) 
+              )
+              student=cursor.fetchone()
+              if student is None:
+                  raise RecordNotFound(404, "record not found")
+            #   elif student["is_deleted"]: dead code
+            #         raise RecordNotFound(404,"student already deleted")
+                   
+            #   else:
+              cursor.execute(
+                 """UPDATE students
+                  SET is_deleted = True
+                  WHERE id= %s""",
+                 (student_id,)
+                 ) 
 
               cursor.execute(
-                "DELETE FROM fees WHERE student_id = %s",
-              (student_id,)
-              )
+                """UPDATE fees
+                 SET is_deleted = True
+                 WHERE id= %s""",
+                 (student_id,)
+                 )          
 
-              cursor.execute(
-              "DELETE FROM students WHERE id = %s",
-              (student_id,)
-              )
-
-              if cursor.rowcount == 0:
-                  raise RecordNotFound(404, f"Invalid student_id {student_id}")
+            
 
           connection.commit()
 
           return {"message": "Student is deleted"}
 
+
+
+# @app.delete("/employees/{employee_id}")
+# def delete_student(employee_id: int):
+#     with psycopg.connect(
+#         "dbname=sms user=postgres password=12341234 host=localhost",
+#         row_factory=dict_row
+#     ) as connection:
+
     
+#           with connection.cursor() as cursor:
+
+#               cursor.execute(
+#               "DELETE FROM salary WHERE employee_id = %s",
+#               (employee_id,)
+#               )
+
+#               cursor.execute(
+#               "DELETE FROM employees WHERE id = %s",
+#               (employee_id,)
+#               ) 
+
+#               if cursor.rowcount == 0:
+#                   raise RecordNotFound(404, f"Invalid employee_id {employee_id}")
+
+#           connection.commit()
+
+#           return {"message": "employee is deleted"}
 
 
 
@@ -445,29 +700,37 @@ def delete_student(employee_id: int):
 
     
           with connection.cursor() as cursor:
-
-              cursor.execute(
-              "DELETE FROM salary WHERE employee_id = %s",
-              (employee_id,)
-              )
-
-              cursor.execute(
-              "DELETE FROM employees WHERE id = %s",
-              (employee_id,)
-              ) 
-
-              if cursor.rowcount == 0:
-                  raise RecordNotFound(404, f"Invalid employee_id {employee_id}")
+            cursor.execute("""
+            select * from employees where id =%s and is_deleted = false""",
+            (employee_id,)               
+            )
+            employee=cursor.fetchone
+            if employee is None:
+                  raise RecordNotFound(404,"record not found")
+            # elif employee["is deleted"]: dead cod
+            #       raise RecordNotFound(404, "employee already deleted")
+            
+                 
+            cursor.execute(
+                  """UPDATE employees
+                   SET is_deleted = True
+                   WHERE id= %s""",
+                   (employee_id,)
+                   ) 
+            cursor.execute(
+                  """UPDATE salary
+                  SET is_deleted = True
+                  WHERE id= %s""",
+                  (employee_id,)
+                  ) 
 
           connection.commit()
 
           return {"message": "employee is deleted"}
 
 
-
-
 @app.delete("/subjects/{id}")
-def delete_student(id: int):
+def delete_subject(id: int):
     with psycopg.connect(
         "dbname=sms user=postgres password=12341234 host=localhost",
         row_factory=dict_row
@@ -475,16 +738,27 @@ def delete_student(id: int):
 
     
           with connection.cursor() as cursor:
-
-              cursor.execute(
-              "DELETE FROM subjects WHERE id = %s",
-              (id,)
-              )
+              cursor.execute("""
+            select * from subject where id =%s""",
+            (id,)               
+            )
+              subject=cursor.fetchone()
+              if subject is None:
+                 raise RecordNotFound(404,"record not found")
+              elif subject["is_deleted"]:
+                 raise RecordNotFound(404, "subject already deleted")
+              
+              else:
+                  cursor.execute(
+                  """UPDATE subject
+                  SET is_deleted = True
+                  WHERE id= %s""",
+                  (id,)
+                  ) 
+                 
 
               
 
-              if cursor.rowcount == 0:
-                  raise RecordNotFound(404, f"Invalid employee_id {id}")
 
           connection.commit()
 

@@ -25,7 +25,7 @@ CREATE TABLE students (
     id SERIAL PRIMARY KEY,
     student_name VARCHAR(100),
     phone_number VARCHAR(15),
-    fees INT 
+ 
 );
 """)
 
